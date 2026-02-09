@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCurrentFrame, useVideoConfig, spring, interpolate, random } from 'remotion';
+import { noise2D } from '@remotion/noise';
 
 const COLORS = {
   background: '#0a0a0f',
@@ -36,6 +37,34 @@ const particles: AmbientParticle[] = Array.from({ length: PARTICLE_COUNT }, (_, 
   speed: 0.3 + random(`sp-${i}`) * 0.7,
   hue: random(`hu-${i}`),
 }));
+
+// ---------------------------------------------------------------------------
+// Pre-computed ambient glow orbs
+// ---------------------------------------------------------------------------
+interface GlowOrb {
+  baseX: number;
+  baseY: number;
+  size: number;
+  opacity: number;
+  color: string;
+}
+
+const glowOrbs: GlowOrb[] = [
+  {
+    baseX: 960,
+    baseY: 460,
+    size: 560,
+    opacity: 0.05,
+    color: 'rgba(0, 212, 255',
+  },
+  {
+    baseX: 400,
+    baseY: 750,
+    size: 500,
+    opacity: 0.04,
+    color: 'rgba(124, 58, 237',
+  },
+];
 
 /**
  * SolutionScene - The "aha moment" scene (~10 seconds / 300 frames at 30fps).
@@ -86,6 +115,15 @@ const SolutionScene: React.FC = () => {
     interpolate(frame, [d, d + 40], [0, 1], clamp),
   );
 
+  // Track when each line just completed (for burst effect)
+  const lineBurstProgress = lineDelays.map((d) => {
+    const completionFrame = d + 40;
+    if (frame < completionFrame) return -1;
+    const age = frame - completionFrame;
+    if (age > 20) return -1; // burst lasts 20 frames
+    return age / 20;
+  });
+
   // 180-240: tagline fades in
   const taglineOpacity = interpolate(frame, [180, 220], [0, 1], clamp);
   const taglineY = interpolate(frame, [180, 220], [30, 0], clamp);
@@ -121,6 +159,31 @@ const SolutionScene: React.FC = () => {
   }
 
   // ---------------------------------------------------------------------------
+  // Aurora gradient mesh blob positions (noise-driven drift)
+  // ---------------------------------------------------------------------------
+  const auroraCyanX = 960 + noise2D('aurora-cx', frame * 0.003, 0) * 80;
+  const auroraCyanY = 460 + noise2D('aurora-cy', frame * 0.003, 1) * 60;
+  const auroraPurpleX = 1200 + noise2D('aurora-px', frame * 0.004, 2) * 100;
+  const auroraPurpleY = 300 + noise2D('aurora-py', frame * 0.004, 3) * 70;
+  const auroraTealX = 700 + noise2D('aurora-tx', frame * 0.0025, 4) * 90;
+  const auroraTealY = 700 + noise2D('aurora-ty', frame * 0.0025, 5) * 50;
+
+  // ---------------------------------------------------------------------------
+  // Ambient glow orb positions (noise-driven drift)
+  // ---------------------------------------------------------------------------
+  const orbPositions = glowOrbs.map((orb, i) => ({
+    x: orb.baseX + noise2D(`orb-x-${i}`, frame * 0.002, i * 10) * 60,
+    y: orb.baseY + noise2D(`orb-y-${i}`, frame * 0.002, i * 10 + 5) * 40,
+  }));
+
+  // ---------------------------------------------------------------------------
+  // Hub gradient mesh color shift
+  // ---------------------------------------------------------------------------
+  const hubMeshPhase = noise2D('hub-mesh', frame * 0.005, 0);
+  const hubMeshCyanOpacity = interpolate(hubMeshPhase, [-1, 1], [0.08, 0.15]);
+  const hubMeshPurpleOpacity = interpolate(hubMeshPhase, [-1, 1], [0.15, 0.08]);
+
+  // ---------------------------------------------------------------------------
   // Layout constants
   // ---------------------------------------------------------------------------
 
@@ -153,7 +216,19 @@ const SolutionScene: React.FC = () => {
 
     return (
       <React.Fragment key={`line-group-${index}`}>
-        {/* Soft glow behind the line */}
+        {/* Wide soft glow behind the line */}
+        <line
+          x1={ex}
+          y1={ey}
+          x2={dx}
+          y2={dy}
+          stroke={`url(#lineGradient${index})`}
+          strokeWidth={14}
+          strokeLinecap="round"
+          opacity={progress > 0 ? 0.08 : 0}
+          filter="url(#lineBlurWide)"
+        />
+        {/* Medium glow behind the line */}
         <line
           x1={ex}
           y1={ey}
@@ -162,7 +237,7 @@ const SolutionScene: React.FC = () => {
           stroke={`url(#lineGradient${index})`}
           strokeWidth={8}
           strokeLinecap="round"
-          opacity={progress > 0 ? 0.15 : 0}
+          opacity={progress > 0 ? 0.2 : 0}
           filter="url(#lineBlur)"
         />
         {/* Main crisp line */}
@@ -179,6 +254,34 @@ const SolutionScene: React.FC = () => {
       </React.Fragment>
     );
   };
+
+  // ---------------------------------------------------------------------------
+  // Connection burst particles (appear when line reaches hub)
+  // ---------------------------------------------------------------------------
+  const BURST_PARTICLE_COUNT = 8;
+  const burstParticles = sources.map((src, i) => {
+    const bp = lineBurstProgress[i]!;
+    if (bp < 0) return null;
+    return Array.from({ length: BURST_PARTICLE_COUNT }, (_, j) => {
+      const angle = (j / BURST_PARTICLE_COUNT) * Math.PI * 2 + random(`burst-a-${i}-${j}`) * 0.5;
+      const dist = 10 + bp * (40 + random(`burst-d-${i}-${j}`) * 30);
+      const bx = centerX + Math.cos(angle) * dist;
+      const by = centerY + Math.sin(angle) * dist;
+      const bopacity = interpolate(bp, [0, 0.3, 1], [0, 0.9, 0], clamp);
+      const bsize = 2 + random(`burst-s-${i}-${j}`) * 2;
+      return (
+        <circle
+          key={`burst-${i}-${j}`}
+          cx={bx}
+          cy={by}
+          r={bsize * (1 - bp * 0.5)}
+          fill={j % 2 === 0 ? COLORS.accent : COLORS.accentPurple}
+          opacity={bopacity}
+          filter="url(#dotGlow)"
+        />
+      );
+    });
+  });
 
   // ---------------------------------------------------------------------------
   // Render
@@ -199,6 +302,52 @@ const SolutionScene: React.FC = () => {
         overflow: 'hidden',
       }}
     >
+      {/* ================================================================= */}
+      {/* Aurora Gradient Mesh Background                                   */}
+      {/* ================================================================= */}
+      {/* Cyan blob - large, slow drift centered around the hub */}
+      <div
+        style={{
+          position: 'absolute',
+          left: auroraCyanX - 400,
+          top: auroraCyanY - 400,
+          width: 800,
+          height: 800,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, rgba(0, 212, 255, 0.07) 0%, transparent 70%)`,
+          pointerEvents: 'none',
+          filter: 'blur(60px)',
+        }}
+      />
+      {/* Purple blob - offset, counter-animated */}
+      <div
+        style={{
+          position: 'absolute',
+          left: auroraPurpleX - 350,
+          top: auroraPurpleY - 350,
+          width: 700,
+          height: 700,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, rgba(124, 58, 237, 0.05) 0%, transparent 70%)`,
+          pointerEvents: 'none',
+          filter: 'blur(50px)',
+        }}
+      />
+      {/* Teal blob - subtle, bottom area */}
+      <div
+        style={{
+          position: 'absolute',
+          left: auroraTealX - 300,
+          top: auroraTealY - 300,
+          width: 600,
+          height: 600,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, rgba(6, 182, 212, 0.04) 0%, transparent 70%)`,
+          pointerEvents: 'none',
+          filter: 'blur(40px)',
+        }}
+      />
+
       {/* Background radial glow behind hub */}
       <div
         style={{
@@ -213,13 +362,32 @@ const SolutionScene: React.FC = () => {
         }}
       />
 
+      {/* ================================================================= */}
+      {/* Ambient Glow Orbs                                                 */}
+      {/* ================================================================= */}
+      {glowOrbs.map((orb, i) => (
+        <div
+          key={`glow-orb-${i}`}
+          style={{
+            position: 'absolute',
+            left: orbPositions[i]!.x - orb.size / 2,
+            top: orbPositions[i]!.y - orb.size / 2,
+            width: orb.size,
+            height: orb.size,
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${orb.color}, ${orb.opacity}) 0%, ${orb.color}, 0) 70%)`,
+            pointerEvents: 'none',
+            filter: 'blur(80px)',
+          }}
+        />
+      ))}
+
       {/* ------------------------------------------------------------------- */}
-      {/* Floating ambient particles                                          */}
+      {/* Floating ambient particles (noise2D driven)                        */}
       {/* ------------------------------------------------------------------- */}
       {particles.map((p, i) => {
-        const t = (frame * p.speed) / 100;
-        const px = p.startX + Math.sin(t * 2.5 + i) * p.driftX;
-        const py = p.startY + Math.cos(t * 1.8 + i * 0.7) * p.driftY;
+        const px = p.startX + noise2D('sol-px' + i, frame * p.speed * 0.01, i * 0.2) * p.driftX;
+        const py = p.startY + noise2D('sol-py' + i, frame * p.speed * 0.008, i * 0.2) * p.driftY;
         const flickerOpacity = p.opacity * (0.7 + 0.3 * Math.sin(frame * 0.05 + i * 3));
         const color = p.hue < 0.5
           ? `rgba(0, 212, 255, ${flickerOpacity})`
@@ -298,8 +466,19 @@ const SolutionScene: React.FC = () => {
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
+          <filter id="dotGlowStrong" x="-300%" y="-300%" width="700%" height="700%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
           <filter id="lineBlur" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="4" />
+          </filter>
+          <filter id="lineBlurWide" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="8" />
           </filter>
           <filter id="pulseBlur" x="-10%" y="-10%" width="120%" height="120%">
             <feGaussianBlur stdDeviation="2" />
@@ -348,12 +527,31 @@ const SolutionScene: React.FC = () => {
           const normX = vecX / len;
           const normY = vecY / len;
 
-          // Trail: 3 trailing dots that fade out behind the main dot
+          // Trail: trailing dots that fade out behind the main dot
           const TRAIL_COUNT = 5;
           const trailSpacing = 10;
 
           return (
             <React.Fragment key={`dot-group-${i}`}>
+              {/* Trail glow (wide, soft) */}
+              {Array.from({ length: TRAIL_COUNT }, (_, t) => {
+                const offset = (t + 1) * trailSpacing;
+                const trailX = dotX - normX * offset;
+                const trailY = dotY - normY * offset;
+                const trailOpacity = 0.3 * (1 - (t + 1) / (TRAIL_COUNT + 1));
+                const trailSize = 6 - t * 0.6;
+                return (
+                  <circle
+                    key={`trail-glow-${i}-${t}`}
+                    cx={trailX}
+                    cy={trailY}
+                    r={Math.max(2, trailSize)}
+                    fill={COLORS.accent}
+                    opacity={trailOpacity}
+                    filter="url(#dotGlowStrong)"
+                  />
+                );
+              })}
               {/* Trail dots (rendered back to front) */}
               {Array.from({ length: TRAIL_COUNT }, (_, t) => {
                 const offset = (t + 1) * trailSpacing;
@@ -380,11 +578,16 @@ const SolutionScene: React.FC = () => {
                 r={5}
                 fill={COLORS.accent}
                 opacity={0.95}
-                filter="url(#dotGlow)"
+                filter="url(#dotGlowStrong)"
               />
             </React.Fragment>
           );
         })}
+
+        {/* ----------------------------------------------------------------- */}
+        {/* Connection burst particles                                        */}
+        {/* ----------------------------------------------------------------- */}
+        {burstParticles}
 
         {/* ----------------------------------------------------------------- */}
         {/* Orbiting dashed ring around hub                                   */}
@@ -435,7 +638,9 @@ const SolutionScene: React.FC = () => {
         </defs>
       </svg>
 
-      {/* Central CROW hub */}
+      {/* ================================================================= */}
+      {/* Central CROW hub (enhanced with gradient mesh glow + glassmorphism)*/}
+      {/* ================================================================= */}
       <div
         style={{
           position: 'absolute',
@@ -450,7 +655,34 @@ const SolutionScene: React.FC = () => {
           transform: `scale(${hubScale * pulseScale})`,
         }}
       >
-        {/* Outer glow ring */}
+        {/* Gradient mesh glow behind hub (shifts cyan <-> purple) */}
+        <div
+          style={{
+            position: 'absolute',
+            width: hubRadius * 2 + 100,
+            height: hubRadius * 2 + 100,
+            borderRadius: '50%',
+            background: `radial-gradient(circle, rgba(0, 212, 255, ${hubMeshCyanOpacity}) 0%, rgba(124, 58, 237, ${hubMeshPurpleOpacity}) 50%, transparent 70%)`,
+            filter: 'blur(30px)',
+            pointerEvents: 'none',
+          }}
+        />
+        {/* Outer bloom ring - stronger pulsing */}
+        <div
+          style={{
+            position: 'absolute',
+            width: hubRadius * 2 + 50,
+            height: hubRadius * 2 + 50,
+            borderRadius: '50%',
+            border: `2px solid rgba(0, 212, 255, ${0.15 + 0.25 * pulseGlow})`,
+            boxShadow: `
+              0 0 30px rgba(0, 212, 255, ${0.15 * pulseGlow}),
+              0 0 60px rgba(0, 212, 255, ${0.1 * pulseGlow}),
+              0 0 100px rgba(124, 58, 237, ${0.12 * pulseGlow})
+            `,
+          }}
+        />
+        {/* Inner glow ring */}
         <div
           style={{
             position: 'absolute',
@@ -461,13 +693,13 @@ const SolutionScene: React.FC = () => {
             boxShadow: `0 0 40px rgba(0, 212, 255, ${0.2 * pulseGlow}), 0 0 80px rgba(124, 58, 237, ${0.15 * pulseGlow})`,
           }}
         />
-        {/* Hub circle */}
+        {/* Hub circle (glassmorphism) */}
         <div
           style={{
             width: hubRadius * 2,
             height: hubRadius * 2,
             borderRadius: '50%',
-            background: `linear-gradient(135deg, rgba(0,212,255,0.15), rgba(124,58,237,0.15))`,
+            background: `linear-gradient(135deg, rgba(0,212,255,0.12), rgba(124,58,237,0.12))`,
             border: `2px solid rgba(0, 212, 255, 0.6)`,
             display: 'flex',
             alignItems: 'center',
@@ -477,7 +709,8 @@ const SolutionScene: React.FC = () => {
               0 0 20px rgba(0, 212, 255, ${0.25 * pulseGlow}),
               0 0 60px rgba(124, 58, 237, ${0.15 * pulseGlow})
             `,
-            backdropFilter: 'blur(10px)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
           }}
         >
           <span
@@ -496,9 +729,14 @@ const SolutionScene: React.FC = () => {
         </div>
       </div>
 
-      {/* Data source nodes */}
+      {/* ================================================================= */}
+      {/* Data source nodes (glassmorphism)                                  */}
+      {/* ================================================================= */}
       {sources.map((src, i) => {
         const nodeSize = 110;
+        const isActive = lineProgress[i]! > 0;
+        const isComplete = lineProgress[i]! >= 1;
+        const activeBorderOpacity = 0.3 + 0.4 * (lineProgress[i]! || 0);
         return (
           <div
             key={src.label}
@@ -509,8 +747,11 @@ const SolutionScene: React.FC = () => {
               width: nodeSize,
               height: nodeSize,
               borderRadius: 16,
-              background: 'rgba(18, 18, 26, 0.9)',
-              border: `1.5px solid rgba(0, 212, 255, ${0.3 + 0.2 * (lineProgress[i]! || 0)})`,
+              background: 'rgba(18, 18, 26, 0.5)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              border: `1.5px solid rgba(0, 212, 255, ${activeBorderOpacity})`,
+              borderTop: `1.5px solid rgba(255, 255, 255, ${isActive ? 0.15 : 0.08})`,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -518,10 +759,11 @@ const SolutionScene: React.FC = () => {
               gap: 6,
               opacity: sourceProgress[i]!.opacity,
               transform: `scale(${sourceProgress[i]!.scale})`,
-              boxShadow: lineProgress[i]! >= 1
-                ? `0 0 20px rgba(0, 212, 255, 0.15), 0 0 40px rgba(124, 58, 237, 0.1)`
-                : 'none',
-              transition: 'box-shadow 0.3s ease',
+              boxShadow: isComplete
+                ? `0 0 25px rgba(0, 212, 255, 0.2), 0 0 50px rgba(124, 58, 237, 0.12), inset 0 0 20px rgba(0, 212, 255, 0.05)`
+                : isActive
+                  ? `0 0 15px rgba(0, 212, 255, 0.1), inset 0 0 10px rgba(0, 212, 255, 0.03)`
+                  : 'none',
             }}
           >
             <span style={{ fontSize: 28, lineHeight: 1 }}>{src.icon}</span>

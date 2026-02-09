@@ -52,54 +52,6 @@ function formatCountUp(value: number, display: string, progress: number): string
   return Math.round(value * progress).toString();
 }
 
-// ── Film grain generator ────────────────────────────────────────
-function FilmGrain({ frame, width, height }: { frame: number; width: number; height: number }) {
-  // Generate a grid of semi-random grain dots using Remotion's deterministic random
-  const grainElements: React.JSX.Element[] = [];
-  const cellSize = 6;
-  const cols = Math.ceil(width / cellSize);
-  const rows = Math.ceil(height / cellSize);
-  // Sparse sampling for performance – only render ~8% of cells
-  const step = 12;
-  for (let r = 0; r < rows; r += step) {
-    for (let c = 0; c < cols; c += step) {
-      const seed = `grain-${r}-${c}-${frame % 4}`;
-      const opacity = random(seed) * 0.07;
-      const bright = random(seed + 'b') > 0.5 ? 255 : 0;
-      grainElements.push(
-        <div
-          key={seed}
-          style={{
-            position: 'absolute',
-            left: c * cellSize,
-            top: r * cellSize,
-            width: cellSize * step,
-            height: cellSize * step,
-            backgroundColor: `rgba(${bright},${bright},${bright},${opacity})`,
-            pointerEvents: 'none',
-          }}
-        />,
-      );
-    }
-  }
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width,
-        height,
-        pointerEvents: 'none',
-        zIndex: 100,
-        mixBlendMode: 'overlay',
-      }}
-    >
-      {grainElements}
-    </div>
-  );
-}
-
 export default function DashboardScene() {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
@@ -127,6 +79,17 @@ export default function DashboardScene() {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
+
+  // ── 3D Perspective Tilt ─────────────────────────────────────────
+  const tiltSpring = spring({
+    frame,
+    fps,
+    config: { damping: 18, stiffness: 60, mass: 1.0 },
+    durationInFrames: 70,
+  });
+
+  const tiltX = interpolate(tiltSpring, [0, 1], [3, 1]);
+  const tiltY = interpolate(tiltSpring, [0, 1], [0.5, 0.15]);
 
   // ── Top bar ───────────────────────────────────────────────────
   const topBarOpacity = interpolate(frame, [20, 50], [0, 1], {
@@ -223,6 +186,22 @@ export default function DashboardScene() {
       ? interpolate(Math.sin((frame - 140) * 0.04), [-1, 1], [0.4, 1])
       : 0.4;
 
+  // ── Aurora Gradient Mesh blob positions ─────────────────────────
+  const auroraTime = frame * 0.02;
+  const cyanBlobX = Math.sin(auroraTime * 0.7) * 60;
+  const cyanBlobY = Math.cos(auroraTime * 0.5) * 40;
+  const purpleBlobX = Math.cos(auroraTime * 0.6) * 80 + 120;
+  const purpleBlobY = Math.sin(auroraTime * 0.8) * 50 - 30;
+  const purpleBlobX2 = Math.sin(auroraTime * 0.4 + 2) * 70 - 100;
+  const purpleBlobY2 = Math.cos(auroraTime * 0.6 + 1) * 60 + 40;
+
+  // ── Ambient Glow Orbs positions ─────────────────────────────────
+  const orbTime = frame * 0.015;
+  const orb1X = width * 0.35 + Math.sin(orbTime * 0.8) * 50;
+  const orb1Y = height * 0.4 + Math.cos(orbTime * 0.6) * 35;
+  const orb2X = width * 0.65 + Math.cos(orbTime * 0.5) * 60;
+  const orb2Y = height * 0.55 + Math.sin(orbTime * 0.7) * 45;
+
   // Dashboard frame dimensions
   const dashW = width * 0.72;
   const dashH = height * 0.7;
@@ -262,8 +241,110 @@ export default function DashboardScene() {
         position: 'relative',
       }}
     >
-      {/* ── Film grain overlay ── */}
-      <FilmGrain frame={frame} width={width} height={height} />
+      {/* ── SVG Film Grain Overlay ── */}
+      <svg
+        width={width}
+        height={height}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          pointerEvents: 'none',
+          mixBlendMode: 'overlay',
+          opacity: 0.04,
+          zIndex: 100,
+        }}
+      >
+        <defs>
+          <filter id="dashGrain" x="0%" y="0%" width="100%" height="100%">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.7"
+              numOctaves={4}
+              seed={frame}
+              stitchTiles="stitch"
+              result="noise"
+            />
+            <feColorMatrix
+              type="matrix"
+              values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0"
+              in="noise"
+            />
+          </filter>
+        </defs>
+        <rect width="100%" height="100%" filter="url(#dashGrain)" />
+      </svg>
+
+      {/* ── Aurora Gradient Mesh Background ── */}
+      <div
+        style={{
+          position: 'absolute',
+          width: 700,
+          height: 700,
+          borderRadius: '50%',
+          background: 'rgba(0, 212, 255, 0.05)',
+          filter: 'blur(120px)',
+          transform: `translate(${cyanBlobX}px, ${cyanBlobY}px)`,
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          width: 600,
+          height: 600,
+          borderRadius: '50%',
+          background: 'rgba(124, 58, 237, 0.04)',
+          filter: 'blur(110px)',
+          transform: `translate(${purpleBlobX}px, ${purpleBlobY}px)`,
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          width: 500,
+          height: 500,
+          borderRadius: '50%',
+          background: 'rgba(124, 58, 237, 0.03)',
+          filter: 'blur(100px)',
+          transform: `translate(${purpleBlobX2}px, ${purpleBlobY2}px)`,
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+
+      {/* ── Ambient Glow Orbs ── */}
+      <div
+        style={{
+          position: 'absolute',
+          left: orb1X - 225,
+          top: orb1Y - 225,
+          width: 450,
+          height: 450,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${COLORS.accent}0a 0%, transparent 70%)`,
+          filter: 'blur(40px)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          left: orb2X - 250,
+          top: orb2Y - 250,
+          width: 500,
+          height: 500,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${COLORS.accentPurple}08 0%, transparent 70%)`,
+          filter: 'blur(50px)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
 
       {/* ── Subtle radial glow behind dashboard ── */}
       <div
@@ -278,11 +359,11 @@ export default function DashboardScene() {
         }}
       />
 
-      {/* ── Browser Chrome Frame ── */}
+      {/* ── Browser Chrome Frame with 3D Perspective ── */}
       <div
         style={{
           opacity: chromeOpacity,
-          transform: `translateY(${chromeY}px)`,
+          transform: `translateY(${chromeY}px) perspective(1200px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`,
           width: dashW,
           height: dashH,
           borderRadius: 16,
@@ -496,7 +577,7 @@ export default function DashboardScene() {
               </div>
             </div>
 
-            {/* ── Metric Cards Row ── */}
+            {/* ── Metric Cards Row (Glassmorphism) ── */}
             <div
               style={{
                 display: 'flex',
@@ -524,11 +605,13 @@ export default function DashboardScene() {
                       flex: 1,
                       opacity: cardOpacity,
                       transform: `translateY(${cardY}px) scale(${cardScale})`,
-                      backgroundColor: `${COLORS.textDim}10`,
+                      backgroundColor: 'rgba(255, 255, 255, 0.04)',
                       borderRadius: 12,
                       padding: '18px 20px',
                       border: `1px solid ${accentColors[i]!}20`,
-                      backdropFilter: 'blur(8px)',
+                      borderTop: `1px solid rgba(255, 255, 255, 0.08)`,
+                      backdropFilter: 'blur(16px)',
+                      WebkitBackdropFilter: 'blur(16px)',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: 6,
@@ -670,16 +753,16 @@ export default function DashboardScene() {
                         ? COLORS.accentPurple
                         : COLORS.accent;
 
-                    // Glow intensity at bar top – pulses subtly after bars settle
+                    // Enhanced glow intensity at bar top – pulses more prominently
                     const glowIntensity =
                       barProgress >= 1 && frame > 140
                         ? interpolate(
                             Math.sin((frame - 140) * 0.06 + i * 0.5),
                             [-1, 1],
-                            [0.3, 0.8],
+                            [0.5, 1.0],
                           )
                         : barProgress >= 1
-                          ? 0.4
+                          ? 0.6
                           : 0;
 
                     return (
@@ -694,17 +777,18 @@ export default function DashboardScene() {
                           height: '100%',
                         }}
                       >
-                        {/* Glow cap at top of bar */}
+                        {/* Enhanced glow cap at top of bar */}
                         {barHeight > 2 && (
                           <div
                             style={{
-                              width: '140%',
-                              height: 6,
-                              borderRadius: 3,
+                              width: '180%',
+                              height: 10,
+                              borderRadius: 5,
                               background: `radial-gradient(ellipse at center, ${barColor}${Math.round(glowIntensity * 99).toString().padStart(2, '0')}, transparent)`,
-                              marginBottom: -3,
+                              marginBottom: -5,
                               zIndex: 2,
                               pointerEvents: 'none',
+                              filter: `blur(${glowIntensity > 0.5 ? 2 : 0}px)`,
                             }}
                           />
                         )}
@@ -713,9 +797,10 @@ export default function DashboardScene() {
                             width: '100%',
                             height: `${barHeight}%`,
                             borderRadius: 4,
-                            background: `linear-gradient(180deg, ${barColor}90, ${barColor}30)`,
+                            background: `linear-gradient(180deg, ${barColor}, ${barColor}60 40%, ${barColor}20)`,
                             minHeight: barProgress > 0 ? 2 : 0,
                             position: 'relative',
+                            boxShadow: barHeight > 2 ? `0 0 12px ${barColor}30, inset 0 1px 0 rgba(255,255,255,0.1)` : 'none',
                           }}
                         />
                       </div>

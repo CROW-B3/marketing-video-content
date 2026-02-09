@@ -32,9 +32,3 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
-
-# test/alternative voice samples
-public/audio/test
-public/audio/andrew
-public/audio/brian
-public/audio/kokoro

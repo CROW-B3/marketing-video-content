@@ -18,5 +18,5 @@ export const VIDEO_CONFIG = {
   width: 1920,
   height: 1080,
   fps: 30,
-  durationInFrames: 30 * 60, // 1800 frames = 60 seconds
+  durationInFrames: 1650, // 55 seconds (1800 - 5 transitions * 30 frame overlap)
 } as const;

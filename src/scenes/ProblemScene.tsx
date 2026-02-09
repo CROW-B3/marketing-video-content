@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCurrentFrame, useVideoConfig, spring, interpolate, random } from 'remotion';
+import { noise2D } from '@remotion/noise';
 import { COLORS, FONTS } from '../styles';
 import { fadeIn, slideUp } from '../utils';
 
@@ -109,6 +110,116 @@ function useSiloAnimation(index: number) {
 
 // ── sub-components ───────────────────────────────────────────────────────────
 
+function AuroraBackground() {
+  const frame = useCurrentFrame();
+
+  // Red-tinted blob drifting with sine waves
+  const redBlobX = 50 + Math.sin(frame * 0.008) * 15;
+  const redBlobY = 40 + Math.cos(frame * 0.006) * 12;
+
+  // Dark purple blob with different frequencies
+  const purpleBlobX = 55 + Math.sin(frame * 0.005 + 1.5) * 20;
+  const purpleBlobY = 55 + Math.cos(frame * 0.007 + 0.8) * 15;
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+      }}
+    >
+      {/* Red-tinted gradient blob */}
+      <div
+        style={{
+          position: 'absolute',
+          left: `${redBlobX}%`,
+          top: `${redBlobY}%`,
+          transform: 'translate(-50%, -50%)',
+          width: 900,
+          height: 900,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(239, 68, 68, 0.06) 0%, transparent 70%)',
+          filter: 'blur(40px)',
+        }}
+      />
+      {/* Dark purple secondary blob */}
+      <div
+        style={{
+          position: 'absolute',
+          left: `${purpleBlobX}%`,
+          top: `${purpleBlobY}%`,
+          transform: 'translate(-50%, -50%)',
+          width: 800,
+          height: 800,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(124, 58, 237, 0.04) 0%, transparent 70%)',
+          filter: 'blur(40px)',
+        }}
+      />
+    </div>
+  );
+}
+
+function AmbientGlowOrbs() {
+  const frame = useCurrentFrame();
+
+  // Warning-red orb drifting slowly
+  const redOrbX = 30 + Math.sin(frame * 0.004) * 8;
+  const redOrbY = 60 + Math.cos(frame * 0.003) * 6;
+
+  // Purple orb drifting slowly
+  const purpleOrbX = 70 + Math.sin(frame * 0.003 + 2.0) * 10;
+  const purpleOrbY = 35 + Math.cos(frame * 0.005 + 1.0) * 8;
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+      }}
+    >
+      {/* Warning-red glow orb */}
+      <div
+        style={{
+          position: 'absolute',
+          left: `${redOrbX}%`,
+          top: `${redOrbY}%`,
+          transform: 'translate(-50%, -50%)',
+          width: 450,
+          height: 450,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(239, 68, 68, 0.05) 0%, transparent 70%)',
+          filter: 'blur(60px)',
+          opacity: 0.06,
+        }}
+      />
+      {/* Purple glow orb */}
+      <div
+        style={{
+          position: 'absolute',
+          left: `${purpleOrbX}%`,
+          top: `${purpleOrbY}%`,
+          transform: 'translate(-50%, -50%)',
+          width: 500,
+          height: 500,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(124, 58, 237, 0.05) 0%, transparent 70%)',
+          filter: 'blur(60px)',
+          opacity: 0.04,
+        }}
+      />
+    </div>
+  );
+}
+
 function FloatingFragments() {
   const frame = useCurrentFrame();
 
@@ -129,11 +240,12 @@ function FloatingFragments() {
           extrapolateRight: 'clamp',
         });
 
-        const x = frag.startX + frag.driftX * progress;
-        const y = frag.startY + frag.driftY * progress;
+        // Use noise2D for organic drift instead of linear movement
+        const x = frag.startX + noise2D('frag-x' + frag.id, frame * 0.005, frag.id * 0.3) * frag.driftX;
+        const y = frag.startY + noise2D('frag-y' + frag.id, frame * 0.004, frag.id * 0.3) * frag.driftY;
         const rot = frag.rotation + progress * 45;
 
-        // Fragments fade in starting at frame 20, stay, and fade with the scene
+        // Fragments fade in starting at frame 20, stay visible
         const fragOpacity = interpolate(frame, [20, 40], [0, frag.opacity], {
           extrapolateLeft: 'clamp',
           extrapolateRight: 'clamp',
@@ -252,22 +364,26 @@ function SiloCard({ silo, index }: { silo: Silo; index: number }) {
         width: 280,
         height: 200,
         borderRadius: 20,
-        border: `1.5px solid rgba(148,163,184,0.2)`,
+        border: '1.5px solid rgba(148,163,184,0.2)',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         background: `
           radial-gradient(
             ellipse at 50% 40%,
             rgba(0,212,255,${glowIntensity * 0.08}) 0%,
-            rgba(18,18,26,0.95) 60%
+            rgba(18,18,26,0.5) 60%
           ),
           linear-gradient(
             180deg,
-            rgba(18,18,26,0.85) 0%,
-            rgba(12,12,18,0.92) 100%
+            rgba(18,18,26,0.45) 0%,
+            rgba(12,12,18,0.55) 100%
           )
         `,
         boxShadow: `
           0 8px 32px rgba(0,0,0,0.4),
-          inset 0 1px 0 rgba(255,255,255,0.04),
+          inset 0 1px 0 rgba(255,255,255,0.06),
+          inset 0 0 30px rgba(0,212,255,${glowIntensity * 0.03}),
           0 0 ${20 + glowIntensity * 15}px rgba(0,212,255,${glowIntensity * 0.06})
         `,
       }}
@@ -389,11 +505,8 @@ const ProblemScene: React.FC = () => {
   const subtitleOpacity = fadeIn(frame, 180, 25);
   const subtitleY = slideUp(frame, 180, 25);
 
-  // ── subtle scene-wide fade out in last 15 frames ──
-  const sceneOutOpacity = interpolate(frame, [270, 300], [1, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+  // ── pulsing text-shadow for heading ──
+  const headingGlowPulse = 0.3 + Math.sin(frame * 0.06) * 0.1;
 
   return (
     <div
@@ -406,31 +519,21 @@ const ProblemScene: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         fontFamily: FONTS.primary,
-        opacity: sceneOutOpacity,
         position: 'relative',
         overflow: 'hidden',
       }}
     >
+      {/* ── aurora gradient mesh background ── */}
+      <AuroraBackground />
+
+      {/* ── ambient glow orbs ── */}
+      <AmbientGlowOrbs />
+
       {/* ── floating data fragments ── */}
       <FloatingFragments />
 
       {/* ── animated scan lines ── */}
       <ScanLines />
-
-      {/* ── subtle background glow ── */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '30%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 800,
-          height: 800,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, rgba(239,68,68,0.06) 0%, transparent 70%)`,
-          pointerEvents: 'none',
-        }}
-      />
 
       {/* ── heading ── */}
       <div
@@ -450,6 +553,7 @@ const ProblemScene: React.FC = () => {
             margin: 0,
             letterSpacing: '-0.03em',
             textAlign: 'center',
+            textShadow: `0 0 40px rgba(239, 68, 68, ${headingGlowPulse}), 0 0 80px rgba(239, 68, 68, ${headingGlowPulse * 0.5})`,
           }}
         >
           The Problem

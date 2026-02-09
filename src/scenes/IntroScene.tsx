@@ -6,6 +6,7 @@ import {
   staticFile,
   Img,
 } from 'remotion';
+import { noise2D } from '@remotion/noise';
 
 const COLORS = {
   background: '#0a0a0f',
@@ -23,6 +24,8 @@ const GRID_ROWS = 14;
 const DOT_SIZE = 3;
 
 const CROW_LETTERS = 'CROW'.split('');
+
+const TAGLINE_WORDS = 'Unified Customer Intelligence'.split(' ');
 
 // Ambient bokeh particles configuration (seeded so it's deterministic)
 interface BokehParticle {
@@ -45,6 +48,22 @@ const BOKEH_PARTICLES: BokehParticle[] = [
   { x: 65, baseY: 102, size: 17, speed: 0.075, opacity: 0.11, hue: -15, phaseOffset: 2.0 },
 ];
 
+// Ambient glow orbs configuration
+interface GlowOrb {
+  baseX: number; // percentage
+  baseY: number; // percentage
+  radius: number; // px
+  opacity: number;
+  color: string;
+  seed: string;
+}
+
+const GLOW_ORBS: GlowOrb[] = [
+  { baseX: 25, baseY: 25, radius: 500, opacity: 0.06, color: 'rgba(0, 212, 255, 0.06)', seed: 'orb-1' },
+  { baseX: 75, baseY: 75, radius: 400, opacity: 0.05, color: 'rgba(124, 58, 237, 0.05)', seed: 'orb-2' },
+  { baseX: 50, baseY: 80, radius: 450, opacity: 0.04, color: 'rgba(6, 182, 212, 0.04)', seed: 'orb-3' },
+];
+
 export default function IntroScene() {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
@@ -55,7 +74,7 @@ export default function IntroScene() {
   // 60-120: logo fades in + scales
   // 90-160: "CROW" types in letter by letter
   // 140-180: "by B3" fades in
-  // 170-210: tagline fades in
+  // 170-210: tagline fades in (word-by-word)
   // 210-240: hold / subtle pulse
 
   // ── Particle Grid ────────────────────────────────────────────
@@ -102,19 +121,9 @@ export default function IntroScene() {
 
   const byB3Y = interpolate(byB3Spring, [0, 1], [12, 0]);
 
-  // ── Tagline ──────────────────────────────────────────────────
-  const taglineSpring = spring({
-    frame: frame - 180,
-    fps,
-    config: { damping: 20, stiffness: 50, mass: 0.6 },
-  });
-
-  const taglineOpacity = interpolate(frame, [180, 215], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-
-  const taglineY = interpolate(taglineSpring, [0, 1], [16, 0]);
+  // ── Tagline (word-by-word) ──────────────────────────────────
+  const taglineStartFrame = 180;
+  const taglineWordStagger = 8; // frames between each word start
 
   // ── Subtle scene zoom (1.0 → 1.02) ────────────────────────
   const sceneScale = interpolate(frame, [0, 240], [1.0, 1.02], {
@@ -132,6 +141,14 @@ export default function IntroScene() {
   const grainX = ((frame * 73) % 200) - 100;
   const grainY = ((frame * 47) % 200) - 100;
 
+  // ── Aurora gradient mesh blob positions ────────────────────
+  const auroraBlob1X = 30 + Math.sin(frame * 0.008) * 10;
+  const auroraBlob1Y = 35 + Math.cos(frame * 0.006) * 8;
+  const auroraBlob2X = 65 + Math.sin(frame * 0.01 + 2.0) * 12;
+  const auroraBlob2Y = 55 + Math.cos(frame * 0.007 + 1.5) * 10;
+  const auroraBlob3X = 50 + Math.sin(frame * 0.012 + 4.0) * 8;
+  const auroraBlob3Y = 70 + Math.cos(frame * 0.009 + 3.0) * 7;
+
   // ── Render ───────────────────────────────────────────────────
   return (
     <div
@@ -148,6 +165,88 @@ export default function IntroScene() {
         transform: `scale(${sceneScale})`,
       }}
     >
+      {/* ── Aurora Gradient Mesh Background ── */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none' as const,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Cyan blob */}
+        <div
+          style={{
+            position: 'absolute',
+            left: `${auroraBlob1X}%`,
+            top: `${auroraBlob1Y}%`,
+            width: 800,
+            height: 800,
+            borderRadius: '50%',
+            background: 'rgba(0, 212, 255, 0.08)',
+            filter: 'blur(120px)',
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
+        {/* Purple blob */}
+        <div
+          style={{
+            position: 'absolute',
+            left: `${auroraBlob2X}%`,
+            top: `${auroraBlob2Y}%`,
+            width: 700,
+            height: 700,
+            borderRadius: '50%',
+            background: 'rgba(124, 58, 237, 0.06)',
+            filter: 'blur(110px)',
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
+        {/* Blue-teal blob */}
+        <div
+          style={{
+            position: 'absolute',
+            left: `${auroraBlob3X}%`,
+            top: `${auroraBlob3Y}%`,
+            width: 550,
+            height: 550,
+            borderRadius: '50%',
+            background: 'rgba(6, 182, 212, 0.05)',
+            filter: 'blur(100px)',
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
+      </div>
+
+      {/* ── Ambient Glow Orbs ── */}
+      {GLOW_ORBS.map((orb, idx) => {
+        const orbDriftX = noise2D(orb.seed + '-x', frame * 0.005, idx * 0.3) * 30;
+        const orbDriftY = noise2D(orb.seed + '-y', frame * 0.004, idx * 0.3) * 25;
+        const orbFadeIn = interpolate(frame, [10, 60], [0, 1], {
+          extrapolateLeft: 'clamp',
+          extrapolateRight: 'clamp',
+        });
+
+        return (
+          <div
+            key={`glow-orb-${idx}`}
+            style={{
+              position: 'absolute',
+              left: `${orb.baseX}%`,
+              top: `${orb.baseY}%`,
+              width: orb.radius,
+              height: orb.radius,
+              borderRadius: '50%',
+              background: `radial-gradient(circle, ${orb.color}, transparent 70%)`,
+              transform: `translate(calc(-50% + ${orbDriftX}px), calc(-50% + ${orbDriftY}px))`,
+              opacity: orbFadeIn,
+              filter: `blur(60px)`,
+              pointerEvents: 'none' as const,
+            }}
+          />
+        );
+      })}
+
       {/* ── Particle Dot Grid ── */}
       <div
         style={{
@@ -199,9 +298,9 @@ export default function IntroScene() {
             // A few dots pick up the accent colour near center
             const isAccent = dist < 0.35 && (i % 7 === 0 || i % 11 === 0);
 
-            // Gentle sine-wave drift for each dot
-            const driftX = Math.sin(frame * 0.015 + i * 0.7) * 2.5;
-            const driftY = Math.cos(frame * 0.012 + i * 0.5) * 2.0;
+            // Noise-based organic drift for each dot
+            const driftX = noise2D('dot-x' + i, frame * 0.008, i * 0.1) * 4;
+            const driftY = noise2D('dot-y' + i, frame * 0.006, i * 0.1) * 3;
 
             return (
               <div
@@ -234,7 +333,7 @@ export default function IntroScene() {
       {BOKEH_PARTICLES.map((p, idx) => {
         const elapsed = Math.max(0, frame - 20);
         const yPos = p.baseY - elapsed * p.speed * 100 / fps;
-        const xWobble = Math.sin(frame * 0.02 + p.phaseOffset) * 12;
+        const xWobble = noise2D('bokeh-x' + idx, frame * 0.01, idx * 0.5) * 15;
         const bokehVisible = interpolate(frame, [20, 50], [0, 1], {
           extrapolateLeft: 'clamp',
           extrapolateRight: 'clamp',
@@ -333,7 +432,7 @@ export default function IntroScene() {
           />
         </div>
 
-        {/* "CROW" typewriter text */}
+        {/* "CROW" typewriter text with glow afterglow */}
         <div
           style={{
             display: 'flex',
@@ -363,6 +462,22 @@ export default function IntroScene() {
             const letterY = interpolate(letterSpring, [0, 1], [20, 0]);
             const letterScale = interpolate(letterSpring, [0, 1], [0.7, 1]);
 
+            // Glow trail / afterglow: blooms on appear, then fades
+            const glowTrailIntensity = interpolate(
+              frame,
+              [letterFrame, letterFrame + 4, letterFrame + 20],
+              [0, 1, 0],
+              { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' },
+            );
+
+            const glowSpread = 30 + glowTrailIntensity * 40;
+            const glowOpacityHex = Math.round(glowTrailIntensity * 180 + 50)
+              .toString(16)
+              .padStart(2, '0');
+            const baseGlowHex = Math.round(80 - glowTrailIntensity * 40)
+              .toString(16)
+              .padStart(2, '0');
+
             return (
               <span
                 key={index}
@@ -374,7 +489,7 @@ export default function IntroScene() {
                   opacity: letterOpacity,
                   transform: `translateY(${letterY}px) scale(${letterScale})`,
                   display: 'inline-block',
-                  textShadow: `0 0 30px ${COLORS.accent}50, 0 0 60px ${COLORS.accent}20`,
+                  textShadow: `0 0 ${glowSpread}px ${COLORS.accent}${glowOpacityHex}, 0 0 ${glowSpread * 2}px ${COLORS.accent}${baseGlowHex}, 0 0 8px ${COLORS.accent}30`,
                 }}
               >
                 {letter}
@@ -414,24 +529,52 @@ export default function IntroScene() {
           </span>
         </div>
 
-        {/* Tagline */}
+        {/* Tagline — word-by-word blur-in reveal */}
         <div
           style={{
-            opacity: taglineOpacity,
-            transform: `translateY(${taglineY}px)`,
+            display: 'flex',
+            flexDirection: 'row',
+            gap: 10,
           }}
         >
-          <span
-            style={{
-              fontSize: 22,
-              fontWeight: 300,
-              color: COLORS.textMuted,
-              letterSpacing: 6,
-              textTransform: 'uppercase',
-            }}
-          >
-            Unified Customer Intelligence
-          </span>
+          {TAGLINE_WORDS.map((word, wordIndex) => {
+            const wordStartFrame = taglineStartFrame + wordIndex * taglineWordStagger;
+
+            const wordSpring = spring({
+              frame: frame - wordStartFrame,
+              fps,
+              config: { damping: 18, stiffness: 70, mass: 0.5 },
+            });
+
+            const wordOpacity = interpolate(
+              frame,
+              [wordStartFrame, wordStartFrame + 12],
+              [0, 1],
+              { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' },
+            );
+
+            const wordBlur = interpolate(wordSpring, [0, 1], [8, 0]);
+            const wordY = interpolate(wordSpring, [0, 1], [10, 0]);
+
+            return (
+              <span
+                key={wordIndex}
+                style={{
+                  fontSize: 22,
+                  fontWeight: 300,
+                  color: COLORS.textMuted,
+                  letterSpacing: 6,
+                  textTransform: 'uppercase',
+                  opacity: wordOpacity,
+                  filter: `blur(${wordBlur}px)`,
+                  transform: `translateY(${wordY}px)`,
+                  display: 'inline-block',
+                }}
+              >
+                {word}
+              </span>
+            );
+          })}
         </div>
 
         {/* Subtle accent line below tagline */}

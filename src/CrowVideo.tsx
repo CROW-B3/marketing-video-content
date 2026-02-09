@@ -2,6 +2,11 @@ import React from 'react';
 import { AbsoluteFill, Sequence, staticFile, useCurrentFrame } from 'remotion';
 // eslint-disable-next-line deprecation/deprecation
 import { Audio } from 'remotion';
+import { TransitionSeries, linearTiming, springTiming } from '@remotion/transitions';
+import { fade } from '@remotion/transitions/fade';
+import { slide } from '@remotion/transitions/slide';
+import { wipe } from '@remotion/transitions/wipe';
+import { clockWipe } from '@remotion/transitions/clock-wipe';
 import IntroScene from './scenes/IntroScene';
 import ProblemScene from './scenes/ProblemScene';
 import SolutionScene from './scenes/SolutionScene';
@@ -19,14 +24,35 @@ const VOICEOVER = {
   cta: 'audio/cta.mp3',
 } as const;
 
-// Scene timing (in frames at 30fps)
-const SCENES = {
-  intro: { start: 0, duration: 240 },        // 0-8s
-  problem: { start: 240, duration: 300 },     // 8-18s
-  solution: { start: 540, duration: 300 },    // 18-28s
-  features: { start: 840, duration: 540 },    // 28-46s
-  dashboard: { start: 1380, duration: 240 },  // 46-54s
-  cta: { start: 1620, duration: 180 },        // 54-60s
+// Transition duration (frames at 30fps)
+const T = 30;
+
+// Scene durations (in frames at 30fps)
+const DURATIONS = {
+  intro: 240,       // 8s
+  problem: 300,     // 10s
+  solution: 300,    // 10s
+  features: 540,    // 18s
+  dashboard: 240,   // 8s
+  cta: 180,         // 6s
+} as const;
+
+// Scene start times accounting for transition overlaps:
+// intro:     0
+// problem:   240 - 30 = 210
+// solution:  210 + 300 - 30 = 480
+// features:  480 + 300 - 30 = 750
+// dashboard: 750 + 540 - 30 = 1260
+// cta:       1260 + 240 - 30 = 1470
+// total:     1470 + 180 = 1650
+
+const AUDIO_STARTS = {
+  intro: 15,
+  problem: 220,
+  solution: 490,
+  features: 765,
+  dashboard: 1270,
+  cta: 1480,
 } as const;
 
 export const CrowVideo: React.FC = () => {
@@ -37,92 +63,111 @@ export const CrowVideo: React.FC = () => {
       style={{
         backgroundColor: '#0a0a0f',
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-        filter: 'contrast(1.03) saturate(1.08) brightness(0.98)',
+        filter: 'contrast(1.03) saturate(1.1) brightness(0.98)',
       }}
     >
-      {/* Animated background glow - subtle shifting radial gradient */}
+      {/* Animated dual-tone background glow */}
       <AbsoluteFill
         style={{
-          background: `radial-gradient(ellipse at ${50 + Math.sin(frame * 0.02) * 8}% ${50 + Math.cos(frame * 0.015) * 6}%, rgba(0, 212, 255, 0.05) 0%, transparent 70%)`,
+          background: `
+            radial-gradient(ellipse at ${50 + Math.sin(frame * 0.015) * 10}% ${50 + Math.cos(frame * 0.012) * 8}%, rgba(0, 212, 255, 0.06) 0%, transparent 60%),
+            radial-gradient(ellipse at ${50 + Math.cos(frame * 0.018) * 12}% ${50 + Math.sin(frame * 0.01) * 10}%, rgba(124, 58, 237, 0.04) 0%, transparent 55%)
+          `,
           pointerEvents: 'none',
         }}
       />
 
-      <Sequence from={SCENES.intro.start} durationInFrames={SCENES.intro.duration}>
-        <IntroScene />
-      </Sequence>
+      {/* Professional scene transitions via TransitionSeries */}
+      <TransitionSeries>
+        {/* Intro Scene */}
+        <TransitionSeries.Sequence durationInFrames={DURATIONS.intro}>
+          <IntroScene />
+        </TransitionSeries.Sequence>
 
-      <Sequence from={SCENES.problem.start} durationInFrames={SCENES.problem.duration}>
-        <ProblemScene />
-      </Sequence>
+        {/* Intro -> Problem: Smooth crossfade */}
+        <TransitionSeries.Transition
+          presentation={fade()}
+          timing={linearTiming({ durationInFrames: T })}
+        />
 
-      <Sequence from={SCENES.solution.start} durationInFrames={SCENES.solution.duration}>
-        <SolutionScene />
-      </Sequence>
+        {/* Problem Scene */}
+        <TransitionSeries.Sequence durationInFrames={DURATIONS.problem}>
+          <ProblemScene />
+        </TransitionSeries.Sequence>
 
-      <Sequence from={SCENES.features.start} durationInFrames={SCENES.features.duration}>
-        <FeaturesScene />
-      </Sequence>
+        {/* Problem -> Solution: Dramatic wipe reveals the answer */}
+        <TransitionSeries.Transition
+          presentation={wipe({ direction: 'from-right' })}
+          timing={springTiming({ config: { damping: 200 }, durationInFrames: T })}
+        />
 
-      <Sequence from={SCENES.dashboard.start} durationInFrames={SCENES.dashboard.duration}>
-        <DashboardScene />
-      </Sequence>
+        {/* Solution Scene */}
+        <TransitionSeries.Sequence durationInFrames={DURATIONS.solution}>
+          <SolutionScene />
+        </TransitionSeries.Sequence>
 
-      <Sequence from={SCENES.cta.start} durationInFrames={SCENES.cta.duration}>
-        <CTAScene />
-      </Sequence>
+        {/* Solution -> Features: Slide up to reveal features */}
+        <TransitionSeries.Transition
+          presentation={slide({ direction: 'from-bottom' })}
+          timing={springTiming({ config: { damping: 200 }, durationInFrames: T })}
+        />
 
-      {/* Voiceover audio tracks - synced to each scene */}
-      <Sequence from={SCENES.intro.start + 15} durationInFrames={SCENES.intro.duration}>
+        {/* Features Scene */}
+        <TransitionSeries.Sequence durationInFrames={DURATIONS.features}>
+          <FeaturesScene />
+        </TransitionSeries.Sequence>
+
+        {/* Features -> Dashboard: Clock wipe for a cinematic reveal */}
+        <TransitionSeries.Transition
+          presentation={clockWipe({ width: 1920, height: 1080 })}
+          timing={linearTiming({ durationInFrames: T })}
+        />
+
+        {/* Dashboard Scene */}
+        <TransitionSeries.Sequence durationInFrames={DURATIONS.dashboard}>
+          <DashboardScene />
+        </TransitionSeries.Sequence>
+
+        {/* Dashboard -> CTA: Elegant fade for the closing */}
+        <TransitionSeries.Transition
+          presentation={fade()}
+          timing={linearTiming({ durationInFrames: T })}
+        />
+
+        {/* CTA Scene */}
+        <TransitionSeries.Sequence durationInFrames={DURATIONS.cta}>
+          <CTAScene />
+        </TransitionSeries.Sequence>
+      </TransitionSeries>
+
+      {/* Voiceover audio tracks - synced to TransitionSeries timing */}
+      <Sequence from={AUDIO_STARTS.intro} durationInFrames={DURATIONS.intro}>
         <Audio src={staticFile(VOICEOVER.intro)} volume={0.9} />
       </Sequence>
-      <Sequence from={SCENES.problem.start + 10} durationInFrames={SCENES.problem.duration}>
+      <Sequence from={AUDIO_STARTS.problem} durationInFrames={DURATIONS.problem}>
         <Audio src={staticFile(VOICEOVER.problem)} volume={0.9} />
       </Sequence>
-      <Sequence from={SCENES.solution.start + 10} durationInFrames={SCENES.solution.duration}>
+      <Sequence from={AUDIO_STARTS.solution} durationInFrames={DURATIONS.solution}>
         <Audio src={staticFile(VOICEOVER.solution)} volume={0.9} />
       </Sequence>
-      <Sequence from={SCENES.features.start + 15} durationInFrames={SCENES.features.duration}>
+      <Sequence from={AUDIO_STARTS.features} durationInFrames={DURATIONS.features}>
         <Audio src={staticFile(VOICEOVER.features)} volume={0.9} />
       </Sequence>
-      <Sequence from={SCENES.dashboard.start + 10} durationInFrames={SCENES.dashboard.duration}>
+      <Sequence from={AUDIO_STARTS.dashboard} durationInFrames={DURATIONS.dashboard}>
         <Audio src={staticFile(VOICEOVER.dashboard)} volume={0.9} />
       </Sequence>
-      <Sequence from={SCENES.cta.start + 10} durationInFrames={SCENES.cta.duration}>
+      <Sequence from={AUDIO_STARTS.cta} durationInFrames={DURATIONS.cta}>
         <Audio src={staticFile(VOICEOVER.cta)} volume={0.9} />
       </Sequence>
 
-      {/* Global subtle vignette overlay - cinematic edge darkening */}
+      {/* Global cinematic vignette */}
       <AbsoluteFill
         style={{
           background:
-            'radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.15) 100%)',
+            'radial-gradient(ellipse at 50% 50%, transparent 50%, rgba(0, 0, 0, 0.2) 100%)',
           pointerEvents: 'none',
         }}
       />
-
-      {/* Scene transition overlays - smooth dip-to-black between scenes */}
-      {Object.values(SCENES).map((scene, i) => {
-        if (i === 0) return null;
-        const transitionStart = scene.start - 20;
-        const transitionEnd = scene.start + 20;
-        if (frame >= transitionStart && frame <= transitionEnd) {
-          const progress = (frame - transitionStart) / 40;
-          // Smooth ease-in-out using sine curve: 0 -> 0.6 -> 0
-          const opacity = Math.sin(progress * Math.PI) * 0.6;
-          return (
-            <AbsoluteFill
-              key={i}
-              style={{
-                backgroundColor: '#0a0a0f',
-                opacity,
-                pointerEvents: 'none',
-              }}
-            />
-          );
-        }
-        return null;
-      })}
     </AbsoluteFill>
   );
 };

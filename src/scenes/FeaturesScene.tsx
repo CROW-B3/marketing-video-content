@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCurrentFrame, useVideoConfig, spring, interpolate, random } from 'remotion';
+import { noise2D } from '@remotion/noise';
 
 const COLORS = {
   background: '#0a0a0f',
@@ -82,7 +83,7 @@ const CodeSnippetVisualization: React.FC<{
   return (
     <div
       style={{
-        backgroundColor: '#0d0d14',
+        background: 'linear-gradient(180deg, #111119 0%, #0d0d14 40%, #0a0a12 100%)',
         borderRadius: 12,
         padding: '24px 28px',
         border: '1px solid rgba(0, 212, 255, 0.15)',
@@ -93,32 +94,50 @@ const CodeSnippetVisualization: React.FC<{
         width: '100%',
         boxShadow:
           '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.03)',
+        position: 'relative' as const,
+        overflow: 'hidden' as const,
       }}
     >
+      {/* Top glow line (screen reflection) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: '10%',
+          right: '10%',
+          height: 1,
+          background: 'linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.25), rgba(124, 58, 237, 0.2), transparent)',
+          borderRadius: 1,
+        }}
+      />
+
       {/* Window dots */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 7, marginBottom: 16 }}>
         <div
           style={{
-            width: 10,
-            height: 10,
+            width: 12,
+            height: 12,
             borderRadius: '50%',
             backgroundColor: '#ff5f57',
+            boxShadow: '0 0 6px rgba(255, 95, 87, 0.3)',
           }}
         />
         <div
           style={{
-            width: 10,
-            height: 10,
+            width: 12,
+            height: 12,
             borderRadius: '50%',
             backgroundColor: '#febc2e',
+            boxShadow: '0 0 6px rgba(254, 188, 46, 0.3)',
           }}
         />
         <div
           style={{
-            width: 10,
-            height: 10,
+            width: 12,
+            height: 12,
             borderRadius: '50%',
             backgroundColor: '#28c840',
+            boxShadow: '0 0 6px rgba(40, 200, 64, 0.3)',
           }}
         />
       </div>
@@ -622,6 +641,35 @@ const CARD_RANGES: Array<{ start: number; end: number }> = [
   { start: 330, end: 480 },
 ];
 
+// --- Ambient glow orb data ---
+interface AmbientOrb {
+  startX: number;
+  startY: number;
+  size: number;
+  color: string;
+  speedX: number;
+  speedY: number;
+}
+
+const AMBIENT_ORBS: AmbientOrb[] = [
+  {
+    startX: 300,
+    startY: 400,
+    size: 400,
+    color: 'rgba(0, 212, 255, 0.03)',
+    speedX: 0.004,
+    speedY: 0.003,
+  },
+  {
+    startX: 1400,
+    startY: 700,
+    size: 500,
+    color: 'rgba(124, 58, 237, 0.025)',
+    speedX: 0.003,
+    speedY: 0.005,
+  },
+];
+
 // --- Main Scene ---
 
 const FeaturesScene: React.FC = () => {
@@ -683,7 +731,7 @@ const FeaturesScene: React.FC = () => {
     const entryGlowIntensity = interpolate(
       localFrame,
       [0, 10, 40],
-      [0, 0.6, 0.15],
+      [0, 0.8, 0.2],
       { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' },
     );
 
@@ -811,11 +859,14 @@ const FeaturesScene: React.FC = () => {
           display: 'flex',
           gap: 48,
           alignItems: 'flex-start',
-          backgroundColor: COLORS.backgroundLight,
+          backgroundColor: 'rgba(18, 18, 26, 0.55)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
           borderRadius: 16,
           padding: '36px 40px',
           ...borderStyle,
-          boxShadow: `0 12px 48px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.03), 0 0 ${30 * entryGlowIntensity}px ${glowColor} ${entryGlowIntensity * 0.5})`,
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: `0 12px 48px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.03), 0 0 ${40 * entryGlowIntensity}px ${glowColor} ${entryGlowIntensity * 0.6}), 0 0 ${80 * entryGlowIntensity}px ${glowColor} ${entryGlowIntensity * 0.2})`,
           maxWidth: 960,
           width: '100%',
         }}
@@ -879,19 +930,22 @@ const FeaturesScene: React.FC = () => {
   const progressPulse = 0.6 + 0.4 * Math.sin(frame * 0.12);
 
   const renderProgressIndicator = () => {
+    const activeFeature = FEATURES[activeIndex]!;
+    const activeColor = activeFeature.accentColor;
+
     return (
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 12,
+          gap: 0,
           position: 'absolute',
           bottom: 48,
           left: '50%',
           transform: 'translateX(-50%)',
         }}
       >
-        {FEATURES.map((_, i) => {
+        {FEATURES.map((feat, i) => {
           const isActive = i === activeIndex;
           const isPast = i < activeIndex;
 
@@ -914,8 +968,16 @@ const FeaturesScene: React.FC = () => {
             config: { damping: 16, stiffness: 100 },
           });
           const dotWidth = isActive
-            ? interpolate(widthSpring, [0, 1], [10, 32])
-            : 10;
+            ? interpolate(widthSpring, [0, 1], [14, 36])
+            : 14;
+
+          // Animated ring scale for active dot
+          const ringScale = isActive
+            ? 1 + 0.2 * Math.sin(frame * 0.1)
+            : 0;
+          const ringOpacity = isActive
+            ? 0.3 + 0.2 * Math.sin(frame * 0.1)
+            : 0;
 
           return (
             <div
@@ -923,37 +985,70 @@ const FeaturesScene: React.FC = () => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
               }}
             >
-              {/* Dot with pulse glow for active state */}
+              {/* Dot container with ring */}
               <div
                 style={{
-                  width: dotWidth,
-                  height: 10,
-                  borderRadius: 5,
-                  backgroundColor:
-                    isActive || isPast
-                      ? FEATURES[i]!.accentColor
-                      : 'rgba(255,255,255,0.12)',
-                  transform: `scale(${dotScale})`,
-                  boxShadow: isActive
-                    ? `0 0 ${8 + 10 * progressPulse}px ${FEATURES[i]!.accentColor}${Math.round(40 + 30 * progressPulse).toString(16)}, 0 0 ${16 + 14 * progressPulse}px ${FEATURES[i]!.accentColor}25`
-                    : isPast
-                      ? `0 0 6px ${FEATURES[i]!.accentColor}20`
-                      : 'none',
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
-              />
+              >
+                {/* Animated ring around active dot */}
+                {isActive && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      width: dotWidth + 12,
+                      height: 14 + 12,
+                      borderRadius: (14 + 12) / 2,
+                      border: `1.5px solid ${activeColor}`,
+                      opacity: ringOpacity,
+                      transform: `scale(${ringScale})`,
+                      pointerEvents: 'none',
+                    }}
+                  />
+                )}
 
-              {/* Connector line (except after last) */}
+                {/* Dot */}
+                <div
+                  style={{
+                    width: dotWidth,
+                    height: 14,
+                    borderRadius: 7,
+                    backgroundColor:
+                      isActive || isPast
+                        ? feat.accentColor
+                        : 'rgba(255,255,255,0.12)',
+                    transform: `scale(${dotScale})`,
+                    boxShadow: isActive
+                      ? `0 0 ${10 + 12 * progressPulse}px ${feat.accentColor}${Math.round(50 + 40 * progressPulse).toString(16)}, 0 0 ${20 + 16 * progressPulse}px ${feat.accentColor}30`
+                      : isPast
+                        ? `0 0 8px ${feat.accentColor}25`
+                        : 'none',
+                  }}
+                />
+              </div>
+
+              {/* Glowing connector line (except after last) */}
               {i < FEATURES.length - 1 && (
                 <div
                   style={{
-                    width: 24,
+                    width: 32,
                     height: 2,
-                    backgroundColor: isPast
-                      ? 'rgba(255,255,255,0.15)'
-                      : 'rgba(255,255,255,0.06)',
+                    marginLeft: 6,
+                    marginRight: 6,
+                    borderRadius: 1,
+                    background: isPast
+                      ? `linear-gradient(90deg, ${FEATURES[i]!.accentColor}40, ${FEATURES[i + 1]!.accentColor}40)`
+                      : i === activeIndex
+                        ? `linear-gradient(90deg, ${activeColor}30, rgba(255,255,255,0.08))`
+                        : 'rgba(255,255,255,0.06)',
+                    boxShadow: isPast
+                      ? `0 0 4px ${FEATURES[i]!.accentColor}20`
+                      : 'none',
                   }}
                 />
               )}
@@ -967,7 +1062,7 @@ const FeaturesScene: React.FC = () => {
             fontFamily: FONTS.code,
             fontSize: 12,
             color: COLORS.textMuted,
-            marginLeft: 12,
+            marginLeft: 16,
             letterSpacing: 1,
           }}
         >
@@ -976,6 +1071,12 @@ const FeaturesScene: React.FC = () => {
       </div>
     );
   };
+
+  // --- Aurora gradient blob positions ---
+  const cyanBlobX = 960 + Math.sin(frame * 0.008) * 200;
+  const cyanBlobY = 250 + Math.cos(frame * 0.006) * 100;
+  const purpleBlobX = 1300 + Math.sin(frame * 0.007 + 2) * 180;
+  const purpleBlobY = 750 + Math.cos(frame * 0.009 + 1) * 120;
 
   return (
     <div
@@ -990,25 +1091,62 @@ const FeaturesScene: React.FC = () => {
         overflow: 'hidden',
       }}
     >
-      {/* Subtle background gradient */}
+      {/* Aurora gradient mesh background - Cyan blob */}
       <div
         style={{
           position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: `radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0, 212, 255, 0.04) 0%, transparent 60%),
-                       radial-gradient(ellipse 60% 40% at 80% 80%, rgba(124, 58, 237, 0.03) 0%, transparent 50%)`,
+          left: cyanBlobX - 400,
+          top: cyanBlobY - 350,
+          width: 800,
+          height: 700,
+          borderRadius: '50%',
+          background: 'radial-gradient(ellipse at center, rgba(0, 212, 255, 0.06) 0%, transparent 70%)',
+          filter: 'blur(80px)',
           pointerEvents: 'none',
         }}
       />
 
-      {/* Floating ambient particles */}
+      {/* Aurora gradient mesh background - Purple blob */}
+      <div
+        style={{
+          position: 'absolute',
+          left: purpleBlobX - 450,
+          top: purpleBlobY - 350,
+          width: 900,
+          height: 700,
+          borderRadius: '50%',
+          background: 'radial-gradient(ellipse at center, rgba(124, 58, 237, 0.05) 0%, transparent 70%)',
+          filter: 'blur(90px)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Ambient glow orbs (far background) */}
+      {AMBIENT_ORBS.map((orb, i) => {
+        const orbDriftX = orb.startX + Math.sin(frame * orb.speedX + i * 1.5) * 120;
+        const orbDriftY = orb.startY + Math.cos(frame * orb.speedY + i * 2.1) * 80;
+        return (
+          <div
+            key={`ambient-orb-${i}`}
+            style={{
+              position: 'absolute',
+              left: orbDriftX - orb.size / 2,
+              top: orbDriftY - orb.size / 2,
+              width: orb.size,
+              height: orb.size,
+              borderRadius: '50%',
+              background: `radial-gradient(circle at center, ${orb.color} 0%, transparent 70%)`,
+              filter: 'blur(60px)',
+              pointerEvents: 'none',
+            }}
+          />
+        );
+      })}
+
+      {/* Floating ambient particles (noise2D driven) */}
       {floatingParticles.map((p, i) => {
-        const t = (frame * p.speed) / 100;
-        const px = p.startX + Math.sin(t * 2.5 + i) * p.driftX;
-        const py = p.startY + Math.cos(t * 1.8 + i * 0.7) * p.driftY;
+        const px = p.startX + noise2D('feat-px' + i, frame * p.speed * 0.01, i * 0.3) * p.driftX;
+        const py = p.startY + noise2D('feat-py' + i, frame * p.speed * 0.008, i * 0.3) * p.driftY;
         const flickerOpacity =
           p.opacity * (0.7 + 0.3 * Math.sin(frame * 0.05 + i * 3));
         const color =
