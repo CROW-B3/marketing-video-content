@@ -1,0 +1,33 @@
+{
+  "name": "crow-marketing-video",
+  "version": "1.0.0",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "preview": "bunx remotion studio src/Root.tsx",
+    "render": "bunx remotion render src/Root.tsx CrowMarketingVideo out/crow-video.mp4",
+    "render:gif": "bunx remotion render src/Root.tsx CrowMarketingVideo out/crow-video.gif",
+    "upgrade": "bunx remotion upgrade"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.419",
+    "@remotion/cli": "^4.0.419",
+    "@remotion/google-fonts": "^4.0.419",
+    "@remotion/motion-blur": "^4.0.419",
+    "@remotion/noise": "^4.0.419",
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
+    "kokoro-js": "^1.2.1",
+    "node-edge-tts": "^1.2.10",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "remotion": "^4.0.419"
+  }
+}
