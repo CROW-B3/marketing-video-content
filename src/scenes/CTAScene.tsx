@@ -805,7 +805,7 @@ export default function CTAScene() {
               opacity: 0.7,
             }}
           >
-            crow.b3.dev
+            crowai.dev
           </span>
         </div>
       </div>

@@ -8,6 +8,9 @@
     "preview": "bunx remotion studio src/Root.tsx",
     "render": "bunx remotion render src/Root.tsx CrowMarketingVideo out/crow-video.mp4",
     "render:gif": "bunx remotion render src/Root.tsx CrowMarketingVideo out/crow-video.gif",
+    "render:reel": "bunx remotion render src/Root.tsx CrowLayersReel out/crow-layers-reel.mp4",
+    "render:reel-01": "bunx remotion render src/Root.tsx CrowReel-ClicksToIntent out/crow_reel_01_clicks_to_intent_9x16.mp4",
+    "render:reel-02": "bunx remotion render src/Root.tsx CrowReel-PlugAIIntoReality out/crow_reel_02_plug_ai_into_reality_9x16.mp4",
     "upgrade": "bunx remotion upgrade"
   },
   "devDependencies": {
