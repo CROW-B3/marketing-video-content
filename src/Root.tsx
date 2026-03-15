@@ -4,6 +4,8 @@ import { CrowVideo } from './CrowVideo';
 import { CrowLayersReel } from './CrowLayersReel';
 import { CrowReel_ClicksToIntent } from './CrowReel_ClicksToIntent';
 import { CrowReel_PlugAIIntoReality } from './CrowReel_PlugAIIntoReality';
+import { CrowReel_3MonthsLater } from './CrowReel_3MonthsLater';
+import { CrowAd_Hero } from './CrowAd_Hero';
 
 // Load Google Fonts globally
 import { loadFont as loadInter } from '@remotion/google-fonts/Inter';
@@ -48,6 +50,22 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={1080}
         height={1920}
+      />
+      <Composition
+        id="CrowReel-3MonthsLater"
+        component={CrowReel_3MonthsLater}
+        durationInFrames={900}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="CrowAd-Hero"
+        component={CrowAd_Hero}
+        durationInFrames={1800}
+        fps={60}
+        width={3840}
+        height={2160}
       />
     </>
   );
