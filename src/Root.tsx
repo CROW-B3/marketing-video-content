@@ -6,6 +6,7 @@ import { CrowReel_ClicksToIntent } from './CrowReel_ClicksToIntent';
 import { CrowReel_PlugAIIntoReality } from './CrowReel_PlugAIIntoReality';
 import { CrowReel_3MonthsLater } from './CrowReel_3MonthsLater';
 import { CrowAd_Hero } from './CrowAd_Hero';
+import { CrowAd_Intern } from './CrowAd_Intern';
 
 // Load Google Fonts globally
 import { loadFont as loadInter } from '@remotion/google-fonts/Inter';
@@ -63,6 +64,14 @@ export const RemotionRoot: React.FC = () => {
         id="CrowAd-Hero"
         component={CrowAd_Hero}
         durationInFrames={1800}
+        fps={60}
+        width={3840}
+        height={2160}
+      />
+      <Composition
+        id="CrowAd-Intern"
+        component={CrowAd_Intern}
+        durationInFrames={1500}
         fps={60}
         width={3840}
         height={2160}

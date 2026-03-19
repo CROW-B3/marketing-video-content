@@ -13,6 +13,7 @@
     "render:reel-02": "bunx remotion render src/Root.tsx CrowReel-PlugAIIntoReality out/crow_reel_02_plug_ai_into_reality_9x16.mp4",
     "render:3months": "bunx remotion render src/Root.tsx CrowReel-3MonthsLater out/crow_3months_later_16x9.mp4",
     "render:hero-ad": "bunx remotion render src/Root.tsx CrowAd-Hero out/crow_hero_ad_4k_60fps.mp4",
+    "render:intern-ad": "bunx remotion render src/Root.tsx CrowAd-Intern out/crow_intern_ad_4k_60fps.mp4",
     "upgrade": "bunx remotion upgrade"
   },
   "devDependencies": {
