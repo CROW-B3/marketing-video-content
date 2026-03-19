@@ -227,7 +227,7 @@ const GradientMesh: React.FC = () => {
         position: 'absolute',
         top: '15%', left: '30%',
         width: 800, height: 500, borderRadius: '50%',
-        background: `radial-gradient(circle, ${C.purple}12 0%, ${C.pink}06 40%, transparent 70%)`,
+        background: `radial-gradient(circle, ${C.purple}08 0%, ${C.pink}03 40%, transparent 70%)`,
         filter: 'blur(90px)',
         transform: `scale(${breathe(frame, 0.02, 0.1)}) translate(${Math.sin(frame * 0.012) * 15}px, ${Math.cos(frame * 0.01) * 10}px)`,
       }} />
@@ -670,8 +670,8 @@ const Scene1_Hook: React.FC<{ frame: number }> = ({ frame }) => {
         maxWidth: 900,
         textAlign: 'center',
       }}>
-        <BloomText size={56} weight={700} glow={glowRamp}>
-          Your customers interact with{'\n'}your business in many places.
+        <BloomText size={56} weight={700} glow={0}>
+          Your customers interact with{'\n'}your business in many ways.
         </BloomText>
       </div>
 
@@ -766,113 +766,96 @@ const Scene2_Channels: React.FC<{ frame: number }> = ({ frame }) => {
         const glowProg = fi(localFrame, chStart + 12, chStart + 50, 0, 1);
         const float = organicFloat(localFrame, `ch2-${i}`, 5);
 
-        // Icon placement
-        const iconX = ch.position === 'left' ? '28%' : '72%';
-        const textX = ch.position === 'left' ? '62%' : '38%';
-
         return (
-          <AbsoluteFill key={i} style={{ opacity: chOpacity }}>
-            {/* Large ambient glow behind icon */}
+          <AbsoluteFill key={i} style={{ opacity: chOpacity, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* Centered row: icon + text side by side */}
             <div style={{
-              position: 'absolute',
-              left: iconX, top: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: 350, height: 350, borderRadius: '50%',
-              background: `radial-gradient(circle, ${ch.accent} 0%, transparent 65%)`,
-              filter: 'blur(50px)',
-              opacity: glowProg * 0.5,
-              pointerEvents: 'none',
-            }} />
-
-            {/* Icon — large, centered on its side */}
-            <div style={{
-              position: 'absolute',
-              left: iconX, top: '50%',
-              transform: `translate(-50%, calc(-50% + ${float.y}px)) scale(${iconScale}) translateX(${iconSlide}px)`,
-              opacity: iconProg,
+              display: 'flex', flexDirection: 'row', alignItems: 'center',
+              gap: 60,
+              transform: `translateY(${float.y}px)`,
             }}>
-              <ch.Icon frame={localFrame} delay={chStart + 3} color={ch.color} size={130} />
-            </div>
-
-            {/* Text + chips — on the opposite side */}
-            <div style={{
-              position: 'absolute',
-              left: textX, top: '50%',
-              transform: `translate(-50%, -50%) translateX(${textSlide}px)`,
-              opacity: textProg,
-              display: 'flex', flexDirection: 'column',
-              alignItems: ch.position === 'left' ? 'flex-start' : 'flex-end',
-              gap: 18, maxWidth: 480,
-            }}>
-              {/* Label */}
-              <BloomText size={48} weight={700} glow={glowProg} color={C.text}
-                style={{ textAlign: ch.position === 'left' ? 'left' : 'right' }}>
-                {ch.label}
-              </BloomText>
-
-              {/* Subtitle */}
+              {/* Icon with ambient glow */}
               <div style={{
-                fontFamily: FONT, fontSize: 18, fontWeight: 400,
-                color: C.textMuted, lineHeight: 1.5,
-                textAlign: ch.position === 'left' ? 'left' : 'right',
-                opacity: fi(localFrame, chStart + 15, chStart + 30),
+                position: 'relative',
+                opacity: iconProg,
+                transform: `scale(${iconScale}) translateX(${iconSlide}px)`,
+                flexShrink: 0,
               }}>
-                {ch.sub}
+                {/* Ambient glow behind icon */}
+                <div style={{
+                  position: 'absolute', inset: -60,
+                  borderRadius: '50%',
+                  background: `radial-gradient(circle, ${ch.accent} 0%, transparent 65%)`,
+                  filter: 'blur(40px)',
+                  opacity: glowProg * 0.5,
+                  pointerEvents: 'none',
+                }} />
+                {/* Decorative ring */}
+                <div style={{
+                  position: 'absolute', inset: -35,
+                  borderRadius: '50%',
+                  border: `1px solid ${ch.color}20`,
+                  opacity: glowProg * 0.5,
+                  pointerEvents: 'none',
+                }} />
+                <ch.Icon frame={localFrame} delay={chStart + 3} color={ch.color} size={160} />
               </div>
 
-              {/* Accent line */}
+              {/* Text + chips */}
               <div style={{
-                width: fi(localFrame, chStart + 18, chStart + 40) * 200,
-                height: 2, borderRadius: 1,
-                background: `linear-gradient(${ch.position === 'left' ? '90deg' : '270deg'}, ${ch.color}80, transparent)`,
-                boxShadow: `0 0 8px ${ch.accent}`,
-              }} />
-
-              {/* Chips row */}
-              <div style={{
-                display: 'flex', flexWrap: 'wrap', gap: 8,
-                justifyContent: ch.position === 'left' ? 'flex-start' : 'flex-end',
+                opacity: textProg,
+                transform: `translateX(${textSlide}px)`,
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'flex-start',
+                gap: 14, maxWidth: 520,
               }}>
-                {ch.chips.map((chip, ci) => {
-                  const chipStart = chStart + 22 + ci * 5;
-                  const chipProg = sp(localFrame, chipStart, SNAP, 14);
-                  return (
-                    <div key={ci} style={{
-                      fontFamily: FONT_MONO, fontSize: 12, fontWeight: 500,
-                      color: ch.color, letterSpacing: '0.04em',
-                      padding: '6px 16px', borderRadius: 8,
-                      background: `${ch.color}08`,
-                      border: `1px solid ${ch.color}25`,
-                      boxShadow: `0 0 ${6 * glowProg}px ${ch.color}12`,
-                      opacity: chipProg,
-                      transform: `translateY(${interpolate(chipProg, [0, 1], [12, 0])}px)`,
-                    }}>
-                      {chip}
-                    </div>
-                  );
-                })}
+                {/* Label */}
+                <BloomText size={52} weight={700} glow={0} color={C.text}
+                  style={{ textAlign: 'left' }}>
+                  {ch.label}
+                </BloomText>
+
+                {/* Subtitle */}
+                <div style={{
+                  fontFamily: FONT, fontSize: 26, fontWeight: 400,
+                  color: C.text, lineHeight: 1.5,
+                  opacity: fi(localFrame, chStart + 15, chStart + 30) * 0.7,
+                }}>
+                  {ch.sub}
+                </div>
+
+                {/* Accent line */}
+                <div style={{
+                  width: fi(localFrame, chStart + 18, chStart + 40) * 240,
+                  height: 2, borderRadius: 1,
+                  background: `linear-gradient(90deg, ${ch.color}80, transparent)`,
+                }} />
+
+                {/* Chips row — single line */}
+                <div style={{
+                  display: 'flex', flexWrap: 'nowrap', gap: 10,
+                }}>
+                  {ch.chips.map((chip, ci) => {
+                    const chipStart = chStart + 22 + ci * 5;
+                    const chipProg = sp(localFrame, chipStart, SNAP, 14);
+                    return (
+                      <div key={ci} style={{
+                        fontFamily: FONT_MONO, fontSize: 15, fontWeight: 600,
+                        color: ch.color, letterSpacing: '0.04em',
+                        padding: '7px 16px', borderRadius: 6,
+                        background: `${ch.color}15`,
+                        border: `1px solid ${ch.color}35`,
+                        opacity: chipProg,
+                        transform: `translateY(${interpolate(chipProg, [0, 1], [8, 0])}px)`,
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {chip}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-
-            {/* Decorative ring behind icon */}
-            <div style={{
-              position: 'absolute',
-              left: iconX, top: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: 220, height: 220, borderRadius: '50%',
-              border: `1px solid ${ch.color}15`,
-              opacity: glowProg * 0.5,
-              pointerEvents: 'none',
-            }} />
-            <div style={{
-              position: 'absolute',
-              left: iconX, top: '50%',
-              transform: `translate(-50%, -50%) rotate(${localFrame * 0.3}deg)`,
-              width: 280, height: 280, borderRadius: '50%',
-              border: `1px dashed ${ch.color}0c`,
-              opacity: glowProg * 0.3,
-              pointerEvents: 'none',
-            }} />
           </AbsoluteFill>
         );
       })}
@@ -909,9 +892,9 @@ const Scene2_Channels: React.FC<{ frame: number }> = ({ frame }) => {
 // 11s(660)="or what they think," + "why they leave."
 const problemLines = [
   { text: "But you don't know", delay: 8, size: 50 },          // 8s → localFrame 8
-  { text: "what they're looking for,", delay: 106, size: 48 },  // 9.77s → globalFrame 586
-  { text: 'or what they think,', delay: 180, size: 48 },        // 11s → localFrame 180
-  { text: 'why they leave.', delay: 244, size: 58 },            // ~12.1s → global frame 724
+  { text: "what they're looking for,", delay: 106, size: 50 },  // 9.77s → globalFrame 586
+  { text: 'what they think,', delay: 180, size: 50 },           // 11s → localFrame 180
+  { text: 'or why they leave.', delay: 244, size: 54 },         // ~12.1s → global frame 724
 ];
 
 const Scene3_Problem: React.FC<{ frame: number }> = ({ frame }) => {
@@ -921,7 +904,7 @@ const Scene3_Problem: React.FC<{ frame: number }> = ({ frame }) => {
   const sceneOut = fo(localFrame, 297, 20);
   const opacity = Math.min(sceneIn, sceneOut);
 
-  const dangerPulse = fi(localFrame, 60, 297, 0, 0.35);
+  const dangerPulse = fi(localFrame, 60, 297, 0, 0.12);
   const dangerBreathe = breathe(localFrame, 0.07, 0.18);
 
   return (
@@ -950,7 +933,7 @@ const Scene3_Problem: React.FC<{ frame: number }> = ({ frame }) => {
             key={i}
             style={{
               position: 'absolute', left: q.x + float.x, top: q.y + float.y,
-              opacity: qProg * 0.35,
+              opacity: qProg * 0.55,
               transform: `scale(${q.s}) rotate(${float.rotate * 4}deg)`,
             }}
           >
@@ -985,9 +968,8 @@ const Scene3_Problem: React.FC<{ frame: number }> = ({ frame }) => {
               <BloomText
                 size={line.size}
                 weight={isLast ? 800 : 600}
-                glow={lGlow}
-                color={isLast ? C.purple : C.text}
-                gradient={isLast}
+                glow={0}
+                color={isLast ? C.purpleLight : C.text}
               >
                 {line.text}
               </BloomText>
@@ -1001,11 +983,11 @@ const Scene3_Problem: React.FC<{ frame: number }> = ({ frame }) => {
         <>
           <div style={{
             position: 'absolute', top: '18%', left: 0, right: 0, height: 1,
-            background: `linear-gradient(90deg, transparent 10%, ${C.purple}${Math.round(fi(localFrame, 150, 250, 0, 30)).toString(16).padStart(2, '0')} 50%, transparent 90%)`,
+            background: `linear-gradient(90deg, transparent 10%, ${C.purple}${Math.round(fi(localFrame, 150, 250, 0, 70)).toString(16).padStart(2, '0')} 50%, transparent 90%)`,
           }} />
           <div style={{
             position: 'absolute', bottom: '22%', left: 0, right: 0, height: 1,
-            background: `linear-gradient(90deg, transparent 15%, ${C.purple}${Math.round(fi(localFrame, 170, 270, 0, 20)).toString(16).padStart(2, '0')} 50%, transparent 85%)`,
+            background: `linear-gradient(90deg, transparent 15%, ${C.purple}${Math.round(fi(localFrame, 170, 270, 0, 50)).toString(16).padStart(2, '0')} 50%, transparent 85%)`,
           }} />
         </>
       )}
@@ -1024,154 +1006,175 @@ const Scene4_Solution: React.FC<{ frame: number }> = ({ frame }) => {
   const sceneOut = fo(localFrame, 210, 30);
   const opacity = Math.min(sceneIn, sceneOut);
 
+  // Layout: diagram centered at 430, heading at 830 — total visual height ~700px centered in 1080
   const centerX = 960;
-  const centerY = 420;
-  const nodeRadius = 300;
+  const centerY = 470;
+  const R = 270;
 
-  // Nodes positioned radially
+  // Symmetric angles: WEB at top, SOCIAL bottom-left, STORE bottom-right (mirrored)
   const nodes = [
     { angle: -90, color: C.cyan, label: 'WEB' },
-    { angle: 30, color: C.red, label: 'STORE' },
     { angle: 150, color: C.purple, label: 'SOCIAL' },
+    { angle: 30, color: C.red, label: 'STORE' },
   ];
 
-  const crowProg = sp(localFrame, 25, SNAP, 28);
-  const crowGlow = fi(localFrame, 35, 140, 0, 1);
-  const lineProgress = fi(localFrame, 60, 160, 0, 1);
+  const crowProg = sp(localFrame, 10, SNAP, 28);
+  const nodeIcons = [IconGlobe, IconSocial, IconStore] as const;
+  const nodeDescs = [
+    'Clicks · Journeys · Heatmaps',
+    'Mentions · Sentiment · Trends',
+    'Foot traffic · Dwell time',
+  ];
+  const nodeEnterDelays = [5, 18, 31];
+  const beamDelays = [40, 55, 70];
 
-  // Pulse waves
-  const pulseCount = 3;
+  // Pre-compute node positions
+  const nodePositions = nodes.map((node) => {
+    const rad = (node.angle * Math.PI) / 180;
+    return { x: centerX + R * Math.cos(rad), y: centerY + R * Math.sin(rad) };
+  });
 
   return (
     <AbsoluteFill style={{ opacity }}>
-      {/* Radial pulse waves */}
-      {Array.from({ length: pulseCount }, (_, i) => {
-        const waveFrame = (localFrame - 45 + i * 30) % 100;
-        const waveR = fi(waveFrame, 0, 70, 0, 1) * 450;
-        const waveO = fi(waveFrame, 0, 70, 0.25, 0);
-        return (
-          <div key={i} style={{
-            position: 'absolute', left: centerX, top: centerY,
-            width: waveR, height: waveR, borderRadius: '50%',
-            border: `1.5px solid ${C.purple}`,
-            transform: 'translate(-50%, -50%)',
-            opacity: localFrame > 45 ? waveO : 0,
-            pointerEvents: 'none',
-          }} />
-        );
+      {/* Connection beams — SVG */}
+      <svg style={{ position: 'absolute', top: 0, left: 0, width: W, height: H, pointerEvents: 'none' }}
+        viewBox={`0 0 ${W} ${H}`}>
+        <defs>
+          <filter id="s4glow"><feGaussianBlur stdDeviation="5" /></filter>
+          {nodes.map((node, i) => (
+            <linearGradient key={i} id={`s4b-${i}`} x1={nodePositions[i].x} y1={nodePositions[i].y} x2={centerX} y2={centerY} gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor={node.color} stopOpacity="0.7" />
+              <stop offset="100%" stopColor={C.purple} stopOpacity="0.1" />
+            </linearGradient>
+          ))}
+        </defs>
+        {nodes.map((node, i) => {
+          const { x: nx, y: ny } = nodePositions[i];
+          // Shorten line: stop 60px from node center (icon edge) and 90px from center (logo edge)
+          const dx = centerX - nx;
+          const dy = centerY - ny;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const ux = dx / dist;
+          const uy = dy / dist;
+          const lx1 = nx + ux * 120;  // start 120px inward from node (past icon + label + desc)
+          const ly1 = ny + uy * 120;
+          const lx2 = centerX - ux * 90; // stop 90px before center (before logo)
+          const ly2 = centerY - uy * 90;
+          const beamProg = sp(localFrame, beamDelays[i], { damping: 16, stiffness: 80 }, 50);
+          const pathLen = 350;
+          const dashOffset = interpolate(beamProg, [0, 1], [pathLen, 0]);
+          return (
+            <g key={i}>
+              <line x1={lx1} y1={ly1} x2={lx2} y2={ly2}
+                stroke={node.color} strokeWidth={10} opacity={beamProg * 0.08}
+                filter="url(#s4glow)" strokeDasharray={pathLen} strokeDashoffset={dashOffset} />
+              <line x1={lx1} y1={ly1} x2={lx2} y2={ly2}
+                stroke={`url(#s4b-${i})`} strokeWidth={2.5} strokeLinecap="round"
+                strokeDasharray={pathLen} strokeDashoffset={dashOffset} />
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Data particles flowing toward center */}
+      {nodes.map((node, ni) => {
+        const { x: nx, y: ny } = nodePositions[ni];
+        return Array.from({ length: 4 }, (_, pi) => {
+          const pDelay = beamDelays[ni] + 12 + pi * 20;
+          const t = fi(localFrame, pDelay, pDelay + 45, 0, 1);
+          if (t <= 0 || t >= 1) return null;
+          return (
+            <div key={`dp-${ni}-${pi}`} style={{
+              position: 'absolute',
+              left: nx + (centerX - nx) * t,
+              top: ny + (centerY - ny) * t,
+              width: 5, height: 5, borderRadius: '50%',
+              backgroundColor: node.color,
+              opacity: Math.sin(t * Math.PI) * 0.85,
+              boxShadow: `0 0 10px ${node.color}90`,
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'none',
+            }} />
+          );
+        });
       })}
 
-      {/* Connection lines + Radial nodes (lines follow converging nodes) */}
+      {/* Channel nodes — SVG icon + label + desc */}
       {nodes.map((node, i) => {
-        const rad = (node.angle * Math.PI) / 180;
-        const convergeFactor = fi(localFrame, 100, 220, 0, 0.25);
-        const nx = centerX + nodeRadius * (1 - convergeFactor) * Math.cos(rad);
-        const ny = centerY + nodeRadius * (1 - convergeFactor) * Math.sin(rad);
-
-        return (
-          <ConnectionLine
-            key={`line-${i}`}
-            x1={nx} y1={ny} x2={centerX} y2={centerY}
-            progress={lineProgress} color={node.color}
-          />
-        );
-      })}
-
-      {nodes.map((node, i) => {
-        const rad = (node.angle * Math.PI) / 180;
-        const convergeFactor = fi(localFrame, 100, 220, 0, 0.25);
-        const nx = centerX + nodeRadius * (1 - convergeFactor) * Math.cos(rad);
-        const ny = centerY + nodeRadius * (1 - convergeFactor) * Math.sin(rad);
-
-        const nodeProg = sp(localFrame, 8, SNAP, 22);
-        const float = organicFloat(localFrame, `node-${i}`, 5);
+        const { x: nx, y: ny } = nodePositions[i];
+        const nodeProg = sp(localFrame, nodeEnterDelays[i], BOUNCE, 22);
+        const nodeScale = interpolate(nodeProg, [0, 1], [0.4, 1]);
+        const float = organicFloat(localFrame, `s4n-${i}`, 4);
+        const Icon = nodeIcons[i];
 
         return (
           <div key={i} style={{
             position: 'absolute', left: nx + float.x, top: ny + float.y,
-            transform: `translate(-50%, -50%) scale(${interpolate(nodeProg, [0, 1], [0.4, 1])})`,
+            transform: `translate(-50%, -50%) scale(${nodeScale})`,
             opacity: nodeProg,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
           }}>
-            {/* Node card — glass style */}
-            <div style={{
-              background: `rgba(255, 255, 255, 0.06)`,
-              backdropFilter: 'blur(24px) saturate(1.6)',
-              WebkitBackdropFilter: 'blur(24px) saturate(1.6)',
-              border: `1px solid rgba(255, 255, 255, 0.12)`,
-              borderTop: `1px solid rgba(255, 255, 255, 0.18)`,
-              borderRadius: 18,
-              boxShadow: `
-                0 8px 32px rgba(0, 0, 0, 0.3),
-                0 0 ${25 * lineProgress}px ${node.color}15,
-                inset 0 1px 0 rgba(255, 255, 255, 0.08)
-              `,
-              padding: '22px 36px',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-              position: 'relative',
-            }}>
-              <SpecularHighlight />
+            <div style={{ position: 'relative' }}>
               <div style={{
-                width: 14, height: 14, borderRadius: '50%',
-                backgroundColor: node.color,
-                boxShadow: `0 0 16px ${node.color}`,
-                opacity: 0.8 + lineProgress * 0.2,
+                position: 'absolute', inset: -20,
+                borderRadius: '50%',
+                background: `radial-gradient(circle, ${node.color}15 0%, transparent 70%)`,
+                filter: 'blur(12px)',
+                pointerEvents: 'none',
               }} />
-              <div style={{
-                fontFamily: FONT, fontSize: 17, fontWeight: 700,
-                color: node.color, letterSpacing: '0.12em',
-                textShadow: `0 0 10px ${node.color}50`,
-              }}>
-                {node.label}
-              </div>
+              <Icon frame={localFrame} delay={nodeEnterDelays[i] + 3} color={node.color} size={80} />
+            </div>
+            <div style={{
+              fontFamily: FONT, fontSize: 24, fontWeight: 700,
+              color: C.text, letterSpacing: '0.1em',
+              textAlign: 'center',
+            }}>
+              {node.label}
+            </div>
+            <div style={{
+              fontFamily: FONT, fontSize: 18, fontWeight: 500,
+              color: C.text, opacity: 0.9,
+              textAlign: 'center',
+              marginTop: -4,
+            }}>
+              {nodeDescs[i]}
             </div>
           </div>
         );
       })}
 
-      {/* Center CROW icon — hero highlight */}
+      {/* Center CROW hub — logo + wordmark, properly centered */}
       <div style={{
         position: 'absolute', left: centerX, top: centerY,
-        transform: `translate(-50%, -50%) scale(${interpolate(crowProg, [0, 1], [0.2, 1])})`,
+        transform: `translate(-50%, -50%) scale(${interpolate(crowProg, [0, 1], [0.3, 1])})`,
         opacity: crowProg,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       }}>
-        {/* Outer glow ring to highlight CROW as the focal point */}
-        <div style={{
-          position: 'absolute', inset: -60,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, ${C.purpleGlow} 0%, ${C.pinkGlow} 40%, transparent 70%)`,
-          filter: 'blur(30px)',
-          opacity: crowGlow * 0.8,
-          pointerEvents: 'none',
-        }} />
-        <CrowIcon glow={crowGlow} size={220} />
+        <Img src={staticFile('logo.png')} style={{ width: 160, height: 160 }} />
+        <span style={{
+          fontFamily: FONT, fontSize: 36, fontWeight: 800,
+          letterSpacing: '0.12em',
+          marginTop: -8,
+          background: 'linear-gradient(135deg, #7c3aed, #8b5cf6, #a78bfa)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }}>
+          CROW
+        </span>
       </div>
 
-      {/* Heading text */}
+      {/* Heading text — positioned right below the diagram */}
       <div style={{
-        position: 'absolute', bottom: 140, width: '100%',
+        position: 'absolute', top: 800, width: '100%',
         display: 'flex', justifyContent: 'center',
-        opacity: sp(localFrame, 50, SOFT, 25),
-        transform: `translateY(${interpolate(sp(localFrame, 50, SOFT, 25), [0, 1], [25, 0])}px)`,
+        opacity: sp(localFrame, 55, SOFT, 25),
+        transform: `translateY(${interpolate(sp(localFrame, 55, SOFT, 25), [0, 1], [20, 0])}px)`,
       }}>
-        <BloomText size={58} weight={700} glow={fi(localFrame, 70, 160, 0, 1)}>
+        <BloomText size={48} weight={700} glow={0}>
           CROW brings all that into one place.
         </BloomText>
       </div>
-
-      {/* Convergence shockwave burst */}
-      {localFrame > 120 && localFrame < 175 && (
-        <div style={{
-          position: 'absolute', left: centerX, top: centerY,
-          width: fi(localFrame, 120, 175, 0, 1) * 700,
-          height: fi(localFrame, 120, 175, 0, 1) * 700,
-          borderRadius: '50%',
-          border: `2px solid ${C.purpleLight}`,
-          transform: 'translate(-50%, -50%)',
-          opacity: fo(localFrame, 140, 35),
-          boxShadow: `0 0 30px ${C.purpleGlow}`,
-          pointerEvents: 'none',
-        }} />
-      )}
     </AbsoluteFill>
   );
 };
@@ -1231,17 +1234,17 @@ const Scene5_CTA: React.FC<{ frame: number }> = ({ frame }) => {
 
       {/* Logo */}
       <div style={{
-        position: 'absolute', left: '50%', top: '22%',
+        position: 'absolute', left: '50%', top: '32%',
         transform: `translate(-50%, -50%) scale(${interpolate(logoProg, [0, 1], [0.4, 1])})`,
         opacity: logoProg,
         filter: `drop-shadow(0 0 20px ${C.purpleGlow})`,
       }}>
-        <Img src={staticFile('logo.png')} style={{ width: 100, height: 100 }} />
+        <Img src={staticFile('logo.png')} style={{ width: 420, height: 420 }} />
       </div>
 
       {/* CROW letters */}
       <div style={{
-        position: 'absolute', top: '36%', width: '100%',
+        position: 'absolute', top: '44%', width: '100%',
         display: 'flex', justifyContent: 'center', gap: 10,
       }}>
         {crowLetters.map((letter, i) => {
@@ -1255,11 +1258,11 @@ const Scene5_CTA: React.FC<{ frame: number }> = ({ frame }) => {
             }}>
               <span style={{
                 fontFamily: FONT, fontSize: 120, fontWeight: 900,
-                background: C.gradientFull,
+                background: 'linear-gradient(135deg, #7c3aed, #8b5cf6, #a78bfa)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
-                filter: `drop-shadow(0 0 ${22 * lGlow}px ${C.purpleGlow}) drop-shadow(0 0 ${50 * lGlow}px ${C.pinkGlow})`,
+                filter: 'none',
                 letterSpacing: '-0.02em',
               }}>
                 {letter}
@@ -1271,7 +1274,7 @@ const Scene5_CTA: React.FC<{ frame: number }> = ({ frame }) => {
 
       {/* Divider */}
       <div style={{
-        position: 'absolute', top: '55%', left: '50%',
+        position: 'absolute', top: '58%', left: '50%',
         transform: 'translateX(-50%)',
         width: fi(localFrame, 50, 80) * 420,
         height: 2,
@@ -1282,19 +1285,19 @@ const Scene5_CTA: React.FC<{ frame: number }> = ({ frame }) => {
 
       {/* Tagline */}
       <div style={{
-        position: 'absolute', top: '61%', width: '100%',
+        position: 'absolute', top: '66%', width: '100%',
         display: 'flex', justifyContent: 'center',
         opacity: tagProg,
         transform: `translateY(${interpolate(tagProg, [0, 1], [18, 0])}px)`,
       }}>
-        <BloomText size={50} weight={600} glow={tagGlow}>
+        <BloomText size={50} weight={600} glow={0}>
           Understand your customers.
         </BloomText>
       </div>
 
       {/* CTA badge */}
       <div style={{
-        position: 'absolute', top: '75%', width: '100%',
+        position: 'absolute', top: '79%', width: '100%',
         display: 'flex', justifyContent: 'center',
         opacity: fi(localFrame, 90, 115),
       }}>
@@ -1305,7 +1308,7 @@ const Scene5_CTA: React.FC<{ frame: number }> = ({ frame }) => {
         }}>
           <SpecularHighlight />
           <span style={{
-            fontFamily: FONT_MONO, fontSize: 20, fontWeight: 600,
+            fontFamily: FONT_MONO, fontSize: 24, fontWeight: 600,
             color: C.purpleLight, letterSpacing: '0.06em',
             textShadow: `0 0 12px ${C.purpleGlow}`,
           }}>
