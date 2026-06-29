@@ -7,6 +7,10 @@ import { CrowReel_PlugAIIntoReality } from './CrowReel_PlugAIIntoReality';
 import { CrowReel_3MonthsLater } from './CrowReel_3MonthsLater';
 import { CrowAd_Hero } from './CrowAd_Hero';
 import { CrowAd_Intern } from './CrowAd_Intern';
+import { CrowBoothLoop } from './CrowBoothLoop';
+import { CrowKeynoteLoop } from './compositions/CrowKeynoteLoop';
+import { CrowAppPreview } from './compositions/CrowKeynoteLoop/AppPreview';
+import { CrowDemoAskPreview } from './compositions/CrowKeynoteLoop/DemoAskPreview';
 
 // Load Google Fonts globally
 import { loadFont as loadInter } from '@remotion/google-fonts/Inter';
@@ -75,6 +79,38 @@ export const RemotionRoot: React.FC = () => {
         fps={60}
         width={3840}
         height={2160}
+      />
+      <Composition
+        id="CrowBoothLoop"
+        component={CrowBoothLoop}
+        durationInFrames={960}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="CrowKeynoteLoop"
+        component={CrowKeynoteLoop}
+        durationInFrames={1500}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="CrowAppPreview"
+        component={CrowAppPreview}
+        durationInFrames={1}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="CrowDemoAskPreview"
+        component={CrowDemoAskPreview}
+        durationInFrames={120}
+        fps={30}
+        width={1920}
+        height={1080}
       />
     </>
   );
